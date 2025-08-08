@@ -25,7 +25,8 @@ from config import (
     BATCH_SIZE,
     DEVICE,
     NUM_WORKERS,
-    PIN_MEMORY
+    PIN_MEMORY,
+    EMMBEDINGS
 )
 from dataset_ssl import ModiSSLPretrainDataset
 from model_ssl import ModiSSLModel
@@ -127,7 +128,9 @@ def parse_args():
     p.add_argument("--ckpt", type=str, default=os.path.join(DRIVE_SAVE_DIR, "ssl_checkpoint.pth"),
                    help="Checkpoint path (model or dict with 'model').")
     p.add_argument("--batch_size", type=int, default=BATCH_SIZE)
-    p.add_argument("--save_emb", type=str, default=None, help="Optional directory to save embeddings as .npy")
+    # p.add_argument("--save_emb", type=str, default=None, help="Optional directory to save embeddings as .npy")
+    p.add_argument("--save_emb", type=str, default=os.path.join(EMMBEDINGS, "ssl_emmb.pth"), help="Optional directory to save embeddings as .npy")
+
     p.add_argument("--chunk_size", type=int, default=512, help="Chunk size for similarity computation")
     p.add_argument("--topk", type=int, nargs="+", default=[1,5], help="Top-k values to compute")
     return p.parse_args()
