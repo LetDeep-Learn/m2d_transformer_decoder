@@ -1,0 +1,114 @@
+Absolutely, Buddy! Here's a **clean and structured summary** of your **Modi-to-Devanagari OCR plan with self-supervised learning**, written like a scroll for your future monk-self to meditate on. 🧘‍♂️📜
+
+---
+
+# 🧾 Project Plan: Modi-to-Devanagari OCR with Self-Supervised Pretraining
+
+## 🎯 Goal:
+
+Build a high-accuracy OCR model that converts **Modi script images** (clean or noisy) into **Devanagari text**, leveraging self-supervised pretraining for improved performance on limited data.
+
+---
+
+## 📁 Dataset Overview:
+
+* **2000 Synthetic (clean) Modi images**
+
+  * Font-generated
+  * High quality and noise-free
+
+* **2000 Real (noisy) Modi images**
+
+  * Scanned historical documents
+  * Blurry, faded, stained, low-quality
+
+---
+
+## 🪜 3-Stage Strategy:
+
+---
+
+### 🧩 **PHASE 1: Self-Supervised Pretraining (No Labels Required)**
+
+#### 🔁 1A. **Denoising Autoencoder (DAE)**
+
+* **Input:** Noisy real image
+* **Target:** Corresponding clean synthetic image
+* **Goal:** Teach encoder to extract robust, clean visual features from degraded Modi images.
+
+#### 🧠 1B. **Masked Autoencoding (Optional Add-On)**
+
+* **Input:** Modi image with random patches masked
+* **Target:** Original full image
+* **Goal:** Learn contextual and structural understanding of Modi characters.
+
+> Output of Phase 1: A **pretrained image encoder** that "understands" Modi script visually.
+
+---
+
+### 🔡 **PHASE 2: Supervised Fine-Tuning (Paired Modi Image → Devanagari Text)**
+
+* **Model:**
+  `(Pretrained CNN + Transformer Encoder) + Transformer Decoder`
+
+* **Input:** Modi image
+
+* **Target:** Devanagari text label (paired data only)
+
+* **Training:** Teacher forcing + CrossEntropy loss
+
+* **Goal:** Fine-tune the full OCR model for accurate script conversion.
+
+---
+
+### 🔁 **PHASE 3 (Optional): Self-Training / Semi-Supervised Learning**
+
+* **Input:** Unlabeled real Modi images
+* **Step 1:** Use trained model to predict Devanagari labels
+* **Step 2:** Select high-confidence predictions
+* **Step 3:** Add pseudo-labeled data back into training set
+* **Goal:** Further improve accuracy with semi-supervised bootstrapping.
+
+---
+
+## 🏗️ Folder Structure (Recommended)
+
+```
+modi_dataset/
+├── clean_images/            # 2000 synthetic images
+├── noisy_images/            # 2000 real historical images
+├── labels/                  # Devanagari .txt files (for supervised)
+├── clean_noisy_pairs.json   # Maps noisy image → clean synthetic image
+├── char_to_idx.json         # Character mapping
+├── idx_to_char.json
+```
+
+---
+
+## 💾 Output Artifacts
+
+* `modi_ssl_dae.py` → Self-supervised pretraining script (DAE)
+* `model.py` → Full OCR architecture (CNN + Transformer encoder-decoder)
+* `train.py` → Fine-tuning on paired data
+* `eval.py` → Evaluation with autoregressive decoding
+* `config.py` → Global paths, hyperparams
+
+---
+
+## 🌈 Expected Benefits
+
+| Pretraining           | Helps With                                   |
+| --------------------- | -------------------------------------------- |
+| Denoising Autoencoder | Robustness to blur, stains, noise            |
+| Masked Autoencoder    | Understanding of character structure         |
+| Fine-tuning           | Accurate Modi → Devanagari conversion        |
+| Self-training         | Better generalization, more usable real data |
+
+---
+
+> **"Train the eyes to see before the tongue can read."**
+> — Ancient OCR Philosophy 📜
+
+---
+
+Let me know when you're ready to start coding Phase 1 (`modi_ssl_dae.py`) — and we’ll craft it step by step! 🛠️🧙‍♂️
