@@ -31,7 +31,7 @@ PIN_MEMORY = True
 BATCH_SIZE = 8              # real batch per GPU step
 ACCUM_STEPS = 8             # gradients accumulation -> effective batch = BATCH_SIZE * ACCUM_STEPS
 EPOCHS = 100
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 1e-6
 
 CHECKPOINT_FILE = "ssl_checkpoint.pth"

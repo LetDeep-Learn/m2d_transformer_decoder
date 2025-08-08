@@ -169,7 +169,7 @@ def train_ssl():
             ckpt = torch.load(checkpoint_path, map_location=device)
             if isinstance(ckpt, dict) and 'model' in ckpt:
                 n_loaded, n_total, skipped = load_partial_checkpoint(model, checkpoint_path, device=device)
-                print(f"[ckpt] Loaded {n_loaded}/{n_total} params from checkpoint. Skipped {len(skipped)} keys.")
+                print(f"[ckpt] 🔄 Loaded {n_loaded}/{n_total} params from checkpoint. Skipped {len(skipped)} keys.")
                 # try optimizer load
                 try:
                     if 'optimizer' in ckpt:
@@ -187,7 +187,7 @@ def train_ssl():
             print("[ckpt] Failed to load checkpoint — starting fresh. Error:", e)
             start_epoch = 0
     else:
-        print("[ckpt] No checkpoint found. Starting fresh training...")
+        print("[ckpt] No checkpoint found.🆕 Starting fresh training...")
 
     # training loop
     for epoch in range(start_epoch, EPOCHS):
@@ -232,7 +232,7 @@ def train_ssl():
         avg_loss = total_loss / len(dataloader)
         scheduler.step()
         current_lr = optimizer.param_groups[0]['lr']
-        print(f"Epoch [{epoch+1}/{EPOCHS}] - Loss: {avg_loss:.6f} - LR: {current_lr:.6e}")
+        print(f"Epoch [{epoch+1}/{EPOCHS}] - 🔻 Loss: {avg_loss:.6f} - LR: {current_lr:.6e}")
 
         # save checkpoint
         save_dict = {"model": model.state_dict(), "epoch": epoch}
@@ -241,12 +241,12 @@ def train_ssl():
         except Exception:
             pass
         torch.save(save_dict, checkpoint_path)
-        print(f"[checkpoint] Saved epoch {epoch} to {checkpoint_path}")
+        print(f"[checkpoint] 💾 Saved epoch {epoch} to {checkpoint_path}")
 
         # quick retrieval eval
         try:
             res = retrieval_topk(model, dataset, device, topk=(1,5), batch_size=min(128, BATCH_SIZE*4), num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
-            print(f"[eval] Retrieval Top-1: {res['top1']:.4f} Top-5: {res['top5']:.4f}")
+            # print(f"[eval] Retrieval Top-1: {res['top1']:.4f} Top-5: {res['top5']:.4f}")
         except Exception as e:
             print("[eval] retrieval failed:", e)
 
