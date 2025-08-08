@@ -20,6 +20,7 @@ IMG_WIDTH = 512
 # Checkpoint file name
 CHECKPOINT_FILE = "ssl_checkpoint.pth"
 
+freeze="/content/drive/MyDrive/m2d_transformer_decoder/saved_models_ssl/ssl_checkpoint.pth"
 
 from torchvision import transforms as T
 
