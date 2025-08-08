@@ -15,8 +15,8 @@ assert len(clean_images) == len(noisy_images), "Mismatch in number of images!"
 # Map clean → noisy
 pairs = {}
 for idx, (clean, noisy) in enumerate(zip(clean_images, noisy_images)):
-    pairs[clean] = noisy
-    print(f"🔗 {clean} ↔ {noisy}")
+    pairs[noisy] = clean
+    print(f"🔗 {noisy} ↔ {clean}")
 
 # Save JSON
 with open(output_json, "w") as f:

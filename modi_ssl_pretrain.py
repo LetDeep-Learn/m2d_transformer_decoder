@@ -189,6 +189,9 @@ def train(args):
         start_epoch = ck.get('epoch', 0) + 1
         print(f"Resumed from {args.resume} at epoch {start_epoch}")
 
+    else :
+        print("started fresh training...")
+
     for epoch in range(start_epoch, args.epochs):
         model.train()
         total_loss = 0.0

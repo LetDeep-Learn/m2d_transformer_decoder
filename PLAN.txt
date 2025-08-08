@@ -1,5 +1,5 @@
 Absolutely, Buddy! Here's a **clean and structured summary** of your **Modi-to-Devanagari OCR plan with self-supervised learning**, written like a scroll for your future monk-self to meditate on. 🧘‍♂️📜
-
+asdfas
 ---
 
 # 🧾 Project Plan: Modi-to-Devanagari OCR with Self-Supervised Pretraining
