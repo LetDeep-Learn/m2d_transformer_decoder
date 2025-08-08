@@ -30,29 +30,33 @@ class NTXentLoss(nn.Module):
 
     def forward(self, z1, z2):
         """
-        z1, z2: [B, D] (assumed normalized)
-        returns scalar loss
+        z1, z2: [B, D] normalized
+        returns scalar loss (>= 0)
         """
         B = z1.size(0)
-        z = torch.cat([z1, z2], dim=0)  # [2B, D]
+        z = torch.cat([z1, z2], dim=0)             # [2B, D]
         sim = torch.matmul(z, z.t()) / self.temperature  # [2B, 2B]
 
-        # For numerical stability subtract row-wise max
+        # numerical stability: subtract max per row (keep same basis for pos)
         sim_max, _ = torch.max(sim, dim=1, keepdim=True)
-        sim = sim - sim_max.detach()
+        sim_stable = sim - sim_max.detach()        # [2B, 2B]
 
-        # mask to remove self-similarities from denominator
+        # mask to remove self-similarity from denom
         mask = (~torch.eye(2 * B, 2 * B, dtype=torch.bool, device=z.device)).float()
 
-        exp_sim = torch.exp(sim) * mask  # zeros diagonal
-        denom = exp_sim.sum(dim=1)  # [2B]
+        exp_sim = torch.exp(sim_stable) * mask     # zeros on diagonal
 
-        # positives: i-th in z1 <-> i-th in z2 (both directions)
-        pos = torch.exp((z1 * z2).sum(dim=-1) / self.temperature)
-        pos = torch.cat([pos, pos], dim=0)  # [2B]
+        denom = exp_sim.sum(dim=1)                 # [2B]
 
-        # Compute loss
-        loss = -torch.log(pos / denom.clamp_min(1e-8))
+        # positive pairs are (i, i+B) and (i+B, i)
+        pos_logits = torch.cat([
+            sim_stable[:B, B:2*B].diag(),   # sim_stable[i, i+B] for i in 0..B-1
+            sim_stable[B:2*B, :B].diag()    # sim_stable[i+B, i] for i in 0..B-1
+        ], dim=0)                            # [2B]
+
+        pos_exp = torch.exp(pos_logits)       # uses the same stabilization shift
+
+        loss = -torch.log( (pos_exp / denom).clamp_min(1e-12) )
         return loss.mean()
 
 # ---------------------------

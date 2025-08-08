@@ -26,31 +26,31 @@ PIN_MEMORY = True
 # -----------------------
 # Image & transform params
 # -----------------------
-IMG_HEIGHT = 128
-IMG_WIDTH = 512
-IMAGE_SIZE = (IMG_HEIGHT, IMG_WIDTH)
+# IMG_HEIGHT = 128
+# IMG_WIDTH = 512
+# IMAGE_SIZE = (IMG_HEIGHT, IMG_WIDTH)
 
-# For grayscale images use single-channel normalization.
-# If you later switch to RGB or add CoordConv channels, update mean/std accordingly.
-NORMALIZE_MEAN = [0.5]
-NORMALIZE_STD = [0.5]
+# # For grayscale images use single-channel normalization.
+# # If you later switch to RGB or add CoordConv channels, update mean/std accordingly.
+# NORMALIZE_MEAN = [0.5]
+# NORMALIZE_STD = [0.5]
 
-# Base transform: resize -> to tensor -> normalize
-BASE_TRANSFORM = T.Compose([
-    T.Resize(IMAGE_SIZE),
-    T.ToTensor(),
-    T.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD)
-])
+# # Base transform: resize -> to tensor -> normalize
+# BASE_TRANSFORM = T.Compose([
+#     T.Resize(IMAGE_SIZE),
+#     T.ToTensor(),
+#     T.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD)
+# ])
 
 # Augmentations applied *before* base transform (PIL ops)
-AUGMENT_TRANSFORM = T.Compose([
-    # strong-ish augmentations but don't completely destroy text
-    T.RandomApply([T.GaussianBlur(kernel_size=5)], p=0.6),
-    T.RandomApply([T.ColorJitter(brightness=0.6, contrast=0.6)], p=0.6),
-    T.RandomRotation(degrees=10),
-    T.RandomResizedCrop(IMAGE_SIZE, scale=(0.7, 1.0), ratio=(0.9, 1.1)),
-    T.RandomErasing(p=0.3, scale=(0.02, 0.2), ratio=(0.3, 3.3))
-])
+# AUGMENT_TRANSFORM = T.Compose([
+#     # strong-ish augmentations but don't completely destroy text
+#     T.RandomApply([T.GaussianBlur(kernel_size=5)], p=0.6),
+#     T.RandomApply([T.ColorJitter(brightness=0.6, contrast=0.6)], p=0.6),
+#     T.RandomRotation(degrees=10),
+#     T.RandomResizedCrop(IMAGE_SIZE, scale=(0.7, 1.0), ratio=(0.9, 1.1)),
+#     T.RandomErasing(p=0.3, scale=(0.02, 0.2), ratio=(0.3, 3.3))
+# ])
 
 # If you want lighter augmentation for debugging, set this to None at runtime
 # AUGMENT_TRANSFORM = None
@@ -84,3 +84,35 @@ SEED = 42
 
 # Create drive save directory early (no-op if exists)
 os.makedirs(DRIVE_SAVE_DIR, exist_ok=True)
+IMG_HEIGHT = 128
+IMG_WIDTH = 512
+IMAGE_SIZE = (IMG_HEIGHT, IMG_WIDTH)
+
+NORMALIZE_MEAN = [0.5]
+NORMALIZE_STD = [0.5]
+
+# PIL-only augmentations (must run on PIL.Image)
+AUGMENT_TRANSFORM = T.Compose([
+    T.RandomApply([T.GaussianBlur(kernel_size=5)], p=0.6),
+    T.RandomApply([T.ColorJitter(brightness=0.6, contrast=0.6)], p=0.6),
+    T.RandomRotation(degrees=10),
+    T.RandomResizedCrop(IMAGE_SIZE, scale=(0.7, 1.0), ratio=(0.9, 1.1)),
+    # DO NOT include RandomErasing here — it expects tensors
+])
+
+# Base transform: resize -> to tensor -> normalize
+BASE_TRANSFORM = T.Compose([
+    T.Resize(IMAGE_SIZE),
+    T.ToTensor(),
+    T.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD)
+])
+
+# Tensor-only augmentations (applied after BASE_TRANSFORM)
+TENSOR_AUGMENT = T.Compose([
+    T.RandomErasing(p=0.3, scale=(0.02, 0.2), ratio=(0.3, 3.3))
+])
+
+# Worker recommendation
+NUM_WORKERS = 2
+PIN_MEMORY = True
+# -------
