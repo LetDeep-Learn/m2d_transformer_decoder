@@ -99,7 +99,8 @@ from config import (
     BATCH_SIZE,
     EPOCHS,
     LEARNING_RATE,
-    CHECKPOINT_FILE
+    CHECKPOINT_FILE,
+    DEVICE
 )
 def train_ssl():
     device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
