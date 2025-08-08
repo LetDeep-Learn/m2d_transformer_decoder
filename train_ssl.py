@@ -81,10 +81,17 @@
 
 # train_ssl.py
 # train_ssl.py
-
 import os
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+from dataset_ssl import ModiSSLPretrainDataset
+from model_ssl import ModiSSLModel
+# from config import DRIVE_SAVE_DIR, CHECKPOINT_FILE, NOISY_IMAGES_DIR, SYNTHETIC_IMAGES_DIR, BATCH_SIZE, EPOCHS, DEVICE,LEARNING_RATE
+
 from config import (
     DRIVE_SAVE_DIR,
     NOISY_IMAGES_DIR,
@@ -94,65 +101,68 @@ from config import (
     LEARNING_RATE,
     CHECKPOINT_FILE
 )
-from dataset_ssl import ModiSSLPretrainDataset
-from model_ssl import ModiSSLModel, ssl_loss
-
-
 def train_ssl():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    os.makedirs(DRIVE_SAVE_DIR, exist_ok=True)
-    checkpoint_path = os.path.join(DRIVE_SAVE_DIR, CHECKPOINT_FILE)
+    device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
 
-    # Dataset — augmentations already inside ModiSSLPretrainDataset
+    # Dataset & DataLoader
     dataset = ModiSSLPretrainDataset(
         noisy_dir=NOISY_IMAGES_DIR,
         synthetic_dir=SYNTHETIC_IMAGES_DIR
     )
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
 
-    # Model + Optimizer
-    model = ModiSSLModel(proj_dim=256, dropout=0.3).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    # Model, Loss, Optimizer
+    model = ModiSSLModel().to(device)
+    criterion = nn.CosineEmbeddingLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    # Resume checkpoint if exists
+    checkpoint_path = os.path.join(DRIVE_SAVE_DIR, CHECKPOINT_FILE)
     start_epoch = 0
+
+    # Resume training logic with backward compatibility
     if os.path.exists(checkpoint_path):
         ckpt = torch.load(checkpoint_path, map_location=device)
-        model.load_state_dict(ckpt["model"])
-        optimizer.load_state_dict(ckpt["optimizer"])
-        start_epoch = ckpt["epoch"] + 1
-        print(f"Resuming from epoch {start_epoch}")
+        if isinstance(ckpt, dict) and "model" in ckpt:
+            model.load_state_dict(ckpt["model"])
+            optimizer.load_state_dict(ckpt["optimizer"])
+            start_epoch = ckpt.get("epoch", -1) + 1
+            print(f"Resumed training from epoch {start_epoch}")
+        else:
+            model.load_state_dict(ckpt)
+            print("Loaded old format checkpoint (model only). Starting from epoch 0.")
+            start_epoch = 0
+    else:
+        print("No checkpoint found. Starting fresh training...")
 
     # Training loop
     for epoch in range(start_epoch, EPOCHS):
         model.train()
         total_loss = 0.0
 
-        for step, (noisy_imgs, synthetic_imgs) in enumerate(dataloader):
-            noisy_imgs, synthetic_imgs = noisy_imgs.to(device), synthetic_imgs.to(device)
+        for noisy_img, synthetic_img in tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}"):
+            noisy_img, synthetic_img = noisy_img.to(device), synthetic_img.to(device)
+
+            noisy_feat = model(noisy_img)
+            synthetic_feat = model(synthetic_img)
+
+            target = torch.ones(noisy_feat.size(0)).to(device)  # Positive pairs
+            loss = criterion(noisy_feat, synthetic_feat, target)
 
             optimizer.zero_grad()
-            z1, z2 = model(noisy_imgs, synthetic_imgs)
-            loss = ssl_loss(z1, z2, alpha=0.5)
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
 
-            if (step + 1) % 20 == 0:  # print every 20 batches
-                print(f"Epoch {epoch+1} | Step {step+1}/{len(dataloader)} | Loss: {loss.item():.4f}")
-
         avg_loss = total_loss / len(dataloader)
-        print(f"Epoch [{epoch+1}/{EPOCHS}] - Avg Loss: {avg_loss:.4f}")
+        print(f"Epoch [{epoch+1}/{EPOCHS}] - Loss: {avg_loss:.4f}")
 
-        # Save checkpoint
+        # Save checkpoint in new format
         torch.save({
-            "epoch": epoch,
             "model": model.state_dict(),
-            "optimizer": optimizer.state_dict()
+            "optimizer": optimizer.state_dict(),
+            "epoch": epoch
         }, checkpoint_path)
-
-    print("Training complete!")
 
 
 if __name__ == "__main__":
