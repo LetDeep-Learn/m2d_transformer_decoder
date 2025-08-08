@@ -1,104 +1,159 @@
+# # train_ssl.py
+
+# import os
+# import torch
+# from torch.utils.data import DataLoader
+# from torchvision import transforms
+# from config import *
+# from dataset_ssl import ModiSSLPretrainDataset
+# from model_ssl import SSLModel
+
+# def train_ssl():
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+#     # Create save directory in Google Drive
+#     os.makedirs(DRIVE_SAVE_DIR, exist_ok=True)
+#     checkpoint_path = os.path.join(DRIVE_SAVE_DIR, CHECKPOINT_FILE)
+
+#     # Dataset + Transform
+#     transform = transforms.Compose([
+#         transforms.Resize((IMG_HEIGHT, IMG_WIDTH)),
+#         transforms.ToTensor()
+#     ])
+
+#     dataset = ModiSSLPretrainDataset(NOISY_IMAGES_DIR, SYNTHETIC_IMAGES_DIR, transform)
+#     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+#     # Model, Loss, Optimizer
+#     model = SSLModel().to(device)
+#     criterion = torch.nn.MSELoss()
+#     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+#     start_epoch = 0
+
+#     # Resume if checkpoint exists
+#     if os.path.exists(checkpoint_path):
+#         checkpoint = torch.load(checkpoint_path, map_location=device)
+#         model.load_state_dict(checkpoint["model"])
+#         optimizer.load_state_dict(checkpoint["optimizer"])
+#         start_epoch = checkpoint["epoch"] + 1
+#         print(f"Resuming training from {checkpoint_path} at epoch {start_epoch}")
+#     else:
+#         print("Starting fresh training")
+
+#     # Training Loop
+#     for epoch in range(start_epoch, EPOCHS):
+#         model.train()
+#         epoch_loss = 0
+
+#         for noisy_img, synthetic_img in dataloader:
+#             noisy_img, synthetic_img = noisy_img.to(device), synthetic_img.to(device)
+#             optimizer.zero_grad()
+#             output = model(noisy_img)
+#             target = model(synthetic_img)
+#             loss = criterion(output, target)
+#             loss.backward()
+#             optimizer.step()
+#             epoch_loss += loss.item()
+
+#         print(f"Epoch [{epoch+1}/{EPOCHS}] - Loss: {epoch_loss/len(dataloader):.4f}")
+
+#         # Save checkpoint
+#         torch.save({
+#             "epoch": epoch,
+#             "model": model.state_dict(),
+#             "optimizer": optimizer.state_dict()
+#         }, checkpoint_path)
+
+#     print("Training complete.")
+
+# if __name__ == "__main__":
+#     train_ssl()
+
+
+
+
+
+
+
+
+
+
+
+# train_ssl.py
+# train_ssl.py
+
 import os
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-from config import DRIVE_SSL_SAVE_DIR, EPOCHS, BATCH_SIZE, LEARNING_RATE
-from dataset_ssl import ModiSSLDataset
-from model_ssl import SSLPretrainModel
-from torchvision import transforms
-import numpy as np
-import random
-import cv2
+from config import (
+    DRIVE_SAVE_DIR,
+    NOISY_IMAGES_DIR,
+    SYNTHETIC_IMAGES_DIR,
+    BATCH_SIZE,
+    EPOCHS,
+    LEARNING_RATE,
+    CHECKPOINT_FILE
+)
+from dataset_ssl import ModiSSLPretrainDataset
+from model_ssl import ModiSSLModel, ssl_loss
 
-# --- Extra corruption functions ---
-def add_gaussian_noise(img, mean=0.0, std=0.1):
-    noise = torch.randn_like(img) * std + mean
-    return torch.clamp(img + noise, 0.0, 1.0)
 
-def random_blur(img, ksize=3):
-    if random.random() < 0.3:  # 30% of the time
-        img_np = img.squeeze(0).numpy()  # (H, W)
-        img_np = cv2.GaussianBlur(img_np, (ksize, ksize), 0)
-        img = torch.from_numpy(img_np).unsqueeze(0)
-    return img
+def train_ssl():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    os.makedirs(DRIVE_SAVE_DIR, exist_ok=True)
+    checkpoint_path = os.path.join(DRIVE_SAVE_DIR, CHECKPOINT_FILE)
 
-def mask_random_patches(img, mask_ratio=0.5):
-    B, C, H, W = img.shape
-    mask = torch.rand(B, 1, H, W, device=img.device) < mask_ratio
-    img = img.clone()
-    img[mask.expand_as(img)] = 0.0
-    return img
+    # Dataset — augmentations already inside ModiSSLPretrainDataset
+    dataset = ModiSSLPretrainDataset(
+        noisy_dir=NOISY_IMAGES_DIR,
+        synthetic_dir=SYNTHETIC_IMAGES_DIR
+    )
+    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
 
-# --- Dataset & DataLoader ---
-transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),
-    transforms.Resize((128, 512)),
-    transforms.ToTensor()
-])
+    # Model + Optimizer
+    model = ModiSSLModel(proj_dim=256, dropout=0.3).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-dataset = ModiSSLDataset(transform=transform)
-dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+    # Resume checkpoint if exists
+    start_epoch = 0
+    if os.path.exists(checkpoint_path):
+        ckpt = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(ckpt["model"])
+        optimizer.load_state_dict(ckpt["optimizer"])
+        start_epoch = ckpt["epoch"] + 1
+        print(f"Resuming from epoch {start_epoch}")
 
-# --- Model, Loss, Optimizer ---
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = SSLPretrainModel().to(device)
-criterion = nn.L1Loss()  # MAE instead of MSE
-optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    # Training loop
+    for epoch in range(start_epoch, EPOCHS):
+        model.train()
+        total_loss = 0.0
 
-# --- Checkpoint Loading ---
-start_epoch = 0
-latest_ckpt = None
-if os.path.exists(DRIVE_SSL_SAVE_DIR):
-    ckpts = [f for f in os.listdir(DRIVE_SSL_SAVE_DIR) if f.endswith(".pth")]
-    if ckpts:
-        latest_ckpt = sorted(ckpts)[-1]
-        ckpt_path = os.path.join(DRIVE_SSL_SAVE_DIR, latest_ckpt)
-        checkpoint = torch.load(ckpt_path, map_location=device)
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        start_epoch = checkpoint["epoch"] + 1
-        print(f"Resuming training from {ckpt_path}")
-else:
-    os.makedirs(DRIVE_SSL_SAVE_DIR, exist_ok=True)
+        for step, (noisy_imgs, synthetic_imgs) in enumerate(dataloader):
+            noisy_imgs, synthetic_imgs = noisy_imgs.to(device), synthetic_imgs.to(device)
 
-if latest_ckpt is None:
-    print("Starting fresh training...")
+            optimizer.zero_grad()
+            z1, z2 = model(noisy_imgs, synthetic_imgs)
+            loss = ssl_loss(z1, z2, alpha=0.5)
+            loss.backward()
+            optimizer.step()
 
-# --- Training Loop ---
-for epoch in range(start_epoch, EPOCHS):
-    model.train()
-    epoch_loss = 0
-    pbar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
+            total_loss += loss.item()
 
-    for clean_imgs, noisy_imgs in pbar:
-        clean_imgs = clean_imgs.to(device)
-        noisy_imgs = noisy_imgs.to(device)
+            if (step + 1) % 20 == 0:  # print every 20 batches
+                print(f"Epoch {epoch+1} | Step {step+1}/{len(dataloader)} | Loss: {loss.item():.4f}")
 
-        # Add extra corruption to noisy images
-        noisy_imgs = add_gaussian_noise(noisy_imgs)
-        noisy_imgs = torch.stack([random_blur(img) for img in noisy_imgs])
-        noisy_imgs = mask_random_patches(noisy_imgs, mask_ratio=0.5)
+        avg_loss = total_loss / len(dataloader)
+        print(f"Epoch [{epoch+1}/{EPOCHS}] - Avg Loss: {avg_loss:.4f}")
 
-        optimizer.zero_grad()
-        outputs = model(noisy_imgs)
-        loss = criterion(outputs, clean_imgs)
-        loss.backward()
-        optimizer.step()
+        # Save checkpoint
+        torch.save({
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict()
+        }, checkpoint_path)
 
-        epoch_loss += loss.item()
-        pbar.set_postfix({"loss": loss.item()})
+    print("Training complete!")
 
-    avg_loss = epoch_loss / len(dataloader)
-    print(f"Epoch [{epoch+1}/{EPOCHS}] - Train Loss: {avg_loss:.4f}")
 
-    # Save checkpoint
-    ckpt_path = os.path.join(DRIVE_SSL_SAVE_DIR, f"ssl_epoch_{epoch+1}.pth")
-    torch.save({
-        "epoch": epoch,
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "loss": avg_loss
-    }, ckpt_path)
-
-print("SSL Pretraining complete.")
+if __name__ == "__main__":
+    train_ssl()
