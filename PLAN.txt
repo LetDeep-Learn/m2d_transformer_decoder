@@ -112,3 +112,38 @@ modi_dataset/
 ---
 
 Let me know when you're ready to start coding Phase 1 (`modi_ssl_dae.py`) — and we’ll craft it step by step! 🛠️🧙‍♂️
+
+
+
+
+
+
+
+
+
+==============================================================
+Got it, Omkar — old script tossed into the digital bonfire 🔥. We’re starting fresh, but keeping the **core plan phases** etched in memory like ancient stone tablets:
+
+---
+
+## 🧠 Modi-to-Devanagari OCR — Phase Summary
+
+### 🧩 Phase 1: Self-Supervised Pretraining
+- Denoising Autoencoder (DAE)
+- Optional: Masked Autoencoder
+- Output: Pretrained image encoder
+
+### 🔡 Phase 2: Supervised Fine-Tuning
+- CNN + Transformer Encoder → Transformer Decoder
+- Input: Modi image
+- Target: Devanagari text
+- Output: Full OCR model
+
+### 🔁 Phase 3: Semi-Supervised Self-Training
+- Use model to pseudo-label unlabeled data
+- Add high-confidence predictions to training set
+- Output: Improved generalization
+
+---
+
+From here on, we’ll build everything modularly and cleanly — multiple files, reusable components, and scalable design. Just say the word when you’re ready to start coding Phase 1 again, and I’ll help you scaffold it out in your new structure. Or if you want to sketch the folder layout and file breakdown first, we can do that too.

@@ -18,22 +18,38 @@ class SSLProjectionHead(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+#   OLD
+# class CNNEncoder(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.encoder = nn.Sequential(
+#             nn.Conv2d(1, 64, 3, 1, 1), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(2),  # [64, 64, 256]
+#             nn.Conv2d(64, 128, 3, 1, 1), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(2), # [128, 32, 128]
+#             nn.Conv2d(128, 256, 3, 1, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.MaxPool2d(2), # [256, 16, 64]
+#             nn.Conv2d(256, 512, 3, 1, 1), nn.BatchNorm2d(512), nn.ReLU(), nn.AdaptiveAvgPool2d((1, 1)) # [512, 1, 1]
+#         )
+
+#     def forward(self, x):
+#         feat = self.encoder(x)          # [B, 512, 1, 1]
+#         feat = feat.view(feat.size(0), -1)  # [B, 512]
+#         return feat
+
 
 class CNNEncoder(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 64, 3, 1, 1), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(2),  # [64, 64, 256]
-            nn.Conv2d(64, 128, 3, 1, 1), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(2), # [128, 32, 128]
-            nn.Conv2d(128, 256, 3, 1, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.MaxPool2d(2), # [256, 16, 64]
-            nn.Conv2d(256, 512, 3, 1, 1), nn.BatchNorm2d(512), nn.ReLU(), nn.AdaptiveAvgPool2d((1, 1)) # [512, 1, 1]
+            # 🆕 Dropout added after ReLU to introduce regularization
+            nn.Conv2d(1, 64, 3, 1, 1), nn.BatchNorm2d(64), nn.ReLU(), nn.Dropout(0.2), nn.MaxPool2d(2),  # [64, 64, 256]
+            nn.Conv2d(64, 128, 3, 1, 1), nn.BatchNorm2d(128), nn.ReLU(), nn.Dropout(0.2), nn.MaxPool2d(2), # [128, 32, 128]
+            nn.Conv2d(128, 256, 3, 1, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Dropout(0.2), nn.MaxPool2d(2), # [256, 16, 64]
+            nn.Conv2d(256, 512, 3, 1, 1), nn.BatchNorm2d(512), nn.ReLU(), nn.Dropout(0.2), nn.AdaptiveAvgPool2d((1, 1)) # [512, 1, 1]
         )
 
     def forward(self, x):
         feat = self.encoder(x)          # [B, 512, 1, 1]
         feat = feat.view(feat.size(0), -1)  # [B, 512]
         return feat
-
 
 class ModiSSLModel(nn.Module):
     def __init__(self, proj_dim=256, dropout=0.3):
