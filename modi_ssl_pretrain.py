@@ -40,6 +40,9 @@ import torchvision.transforms as T
 # Utilities & Dataset
 # -----------------------------
 
+DRIVE_BASE = "/content/drive/MyDrive/m2d_transformer_decoder/saved_models" 
+
+
 class ModiPairDataset(Dataset):
     """Dataset that yields (noisy_image, clean_image) pairs. If a pair isn't found,
     it can optionally sample a random clean image (but recommended to provide mapping).
