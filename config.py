@@ -21,7 +21,7 @@ FREEZE_CHECKPOINT = "/content/drive/MyDrive/m2d_transformer_decoder/saved_models
 # Device / runtime
 # -----------------------
 DEVICE = "cuda"  # train script checks torch.cuda.is_available()
-NUM_WORKERS = 4
+NUM_WORKERS = 2
 PIN_MEMORY = True
 
 
