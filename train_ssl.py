@@ -91,6 +91,36 @@ class NTXentLoss(nn.Module):
         loss = -torch.log((pos_exp / denom).clamp_min(1e-12))
         return loss.mean()
 
+
+
+
+
+# ---------------------------
+# Cosine Similarity Loss for SSL
+# ---------------------------
+
+class CosineSimilarityLoss(nn.Module):
+    def __init__(self):
+        """
+        Negative cosine similarity loss.
+        Encourages z1 and z2 to have high cosine similarity.
+        """
+        super().__init__()
+        self.cosine_sim = nn.CosineSimilarity(dim=-1)
+
+    def forward(self, z1, z2):
+        """
+        z1, z2: [B, D] feature vectors
+        Returns: scalar loss (>=0)
+        """
+        # Ensure both embeddings are normalized
+        z1 = nn.functional.normalize(z1, dim=1)
+        z2 = nn.functional.normalize(z2, dim=1)
+
+        # Negative cosine similarity
+        loss = 1 - self.cosine_sim(z1, z2).mean()
+        return loss
+
 # ---------------------------
 # Partial checkpoint loader (safe)
 # ---------------------------
@@ -153,7 +183,10 @@ def train_ssl():
 
     # model / loss / optimizer
     model = ModiSSLModel(proj_dim=PROJ_DIM).to(device)
+    # criterion = NTXentLoss(temperature=NTXENT_TEMPERATURE)
     criterion = NTXentLoss(temperature=NTXENT_TEMPERATURE)
+
+    
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
     # cosine annealing scheduler
