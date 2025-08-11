@@ -49,9 +49,9 @@ BASE_CHANNELS = 64
 # -----------------------
 # Misc
 # -----------------------
+# config.py
 SEED = 42
 
-# Create drive save directory early (no-op if exists)
 os.makedirs(DRIVE_SAVE_DIR, exist_ok=True)
 IMAGE_SIZE = (128, 512)
 NORMALIZE_MEAN = [0.5]
@@ -59,11 +59,20 @@ NORMALIZE_STD = [0.5]
 
 # PIL-only augmentations (operate on PIL.Image)
 AUGMENT_TRANSFORM = T.Compose([
+    T.RandomApply([T.ColorJitter(brightness=0.6, contrast=0.6, saturation=0.4, hue=0.02)], p=0.8),
     T.RandomApply([T.GaussianBlur(kernel_size=5)], p=0.5),
-    T.RandomApply([T.ColorJitter(brightness=0.5, contrast=0.5)], p=0.5),
-    T.RandomRotation(degrees=6),
-    T.RandomAffine(degrees=5, translate=(0.02,0.02), scale=(0.95,1.05), shear=2),
-    T.RandomResizedCrop(IMAGE_SIZE, scale=(0.8, 1.0), ratio=(0.95,1.05)),
+    T.RandomRotation(degrees=8),
+    T.RandomAffine(
+        degrees=6,
+        translate=(0.04, 0.04),
+        scale=(0.9, 1.1),
+        shear=3
+    ),
+    T.RandomResizedCrop(
+        IMAGE_SIZE,
+        scale=(0.6, 1.0),      # wider scale range
+        ratio=(0.95, 1.05)     # keep aspect close
+    ),
 ])
 
 BASE_TRANSFORM = T.Compose([
@@ -74,5 +83,5 @@ BASE_TRANSFORM = T.Compose([
 
 # Tensor-only augmentations (after ToTensor)
 TENSOR_AUGMENT = T.Compose([
-    T.RandomErasing(p=0.25, scale=(0.01, 0.08), ratio=(0.3, 3.3)),
+    T.RandomErasing(p=0.4, scale=(0.01, 0.15), ratio=(0.3, 3.3)),
 ])
